@@ -25,6 +25,28 @@ local ToServer = ReplicatedStorage:WaitForChild("Events"):WaitForChild("To_Serve
 local selectedMonsterId = nil
 local monsterMap = {} -- [ชื่อ Title] = Monster_Id
 local autofarm = false
+local lastTarget = nil
+
+-- ฟังก์ชันอ่าน Health แบบยืดหยุ่น
+local function GetMonsterHealth(mob)
+    local health = mob:GetAttribute("Health")
+    if health ~= nil then
+        health = tonumber(health)
+        if health then return health end
+    end
+
+    local humanoid = mob:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health ~= nil then
+        return humanoid.Health
+    end
+
+    local val = mob:FindFirstChild("Health")
+    if val and (val:IsA("NumberValue") or val:IsA("IntValue")) then
+        return val.Value
+    end
+
+    return nil -- ไม่พบ health
+end
 
 -- Dropdown UI
 local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
@@ -73,20 +95,34 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
+            local targetFound = false
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                if mob:GetAttribute("Monster_Id") == selectedMonsterId then
+                local mobId = mob:GetAttribute("Monster_Id")
+                if mobId == selectedMonsterId then
                     local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                    if mobHRP then
-                        -- วาร์ปไป + โจมตี
-                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                    local health = GetMonsterHealth(mob)
+
+                    if mobHRP and health and health > 0 then
+                        if mob ~= lastTarget then
+                            hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                            lastTarget = mob
+                        end
+
                         ToServer:FireServer({
                             ["Id"] = mob.Name,
                             ["Action"] = "_Mouse_Click"
                         })
+
+                        targetFound = true
                         break
                     end
                 end
             end
+            if not targetFound then
+                lastTarget = nil
+            end
+        else
+            lastTarget = nil
         end
     end
 end)
