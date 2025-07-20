@@ -49,8 +49,11 @@ Tabs.Main:AddButton({
     Title = "🔄 รีเฟรชมอนสเตอร์",
     Callback = function()
         monsterMap = {}
+        selectedMonsterId = nil
+        selectedMobData = nil
+        monsterDropdown:SetValue(nil) -- ✅ รีเซ็ตค่าที่เลือกใน Dropdown
+        
         local titles = {}
-
         for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
             local id = mob:GetAttribute("Monster_Id")
             local title = mob:GetAttribute("Title")
@@ -67,13 +70,15 @@ Tabs.Main:AddButton({
         end
 
         monsterDropdown:SetValues(titles)
+
         Fluent:Notify({
             Title = "โหลดสำเร็จ",
-            Content = "พบ " .. #titles .. " ตัว",
+            Content = "พบ " .. #titles .. " ตัว\n(ยกเลิกการเลือกมอนสเตอร์)",
             Duration = 3
         })
     end
 })
+
 
 -- Toggle เปิด/ปิด AutoFarm
 Tabs.Main:AddToggle("AutoFarmToggle", {
