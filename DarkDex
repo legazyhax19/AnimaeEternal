@@ -86,39 +86,51 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 
 -- ลูปวาร์ปครั้งเดียวและรอตัวต่อไปเมื่อมอนตาย
 local currentTarget = nil
+local hasWarped = false -- สำหรับเช็คว่าได้วาร์ปไปแล้วหรือยัง
 
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- ถ้าไม่มีเป้าหมายหรือเป้าหมายตายไปแล้ว
+            -- ถ้ายังไม่มีเป้าหมาย ให้ค้นหา
             if not currentTarget or not currentTarget.Parent then
                 currentTarget = nil
-            elseif currentTarget:FindFirstChildOfClass("Humanoid") and currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0 then
-                currentTarget = nil
-            end
-
-            -- ถ้ายังไม่มีเป้าหมายใหม่ ให้หาใหม่และวาร์ป
-            if not currentTarget then
+                hasWarped = false
                 for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                     if mob:GetAttribute("Monster_Id") == selectedMonsterId then
-                        local mobHumanoid = mob:FindFirstChildOfClass("Humanoid")
-                        if mobHumanoid and mobHumanoid.Health > 0 then
+                        local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                        if humanoid and humanoid.Health > 0 then
                             currentTarget = mob
-                            local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                            if mobHRP then
-                                local offset = Vector3.new(0, 3, -2)
-                                hrp.CFrame = mobHRP.CFrame + offset
-                            end
                             break
                         end
                     end
                 end
             end
+
+            -- ถ้ามีเป้าหมายแล้ว และยังไม่วาร์ปไปหา ให้วาร์ปครั้งเดียว
+            if currentTarget and not hasWarped then
+                local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+                if mobHRP then
+                    local offset = Vector3.new(0, 3, -2)
+                    hrp.CFrame = mobHRP.CFrame + offset
+                    hasWarped = true
+                end
+            end
+
+            -- เช็คว่ามอนสเตอร์ตายแล้ว ค่อยเตรียมหาเป้าหมายใหม่รอบถัดไป
+            if currentTarget then
+                local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health <= 0 then
+                    currentTarget = nil
+                    hasWarped = false
+                end
+            end
         else
-            currentTarget = nil -- รีเซ็ตถ้าปิดฟาร์ม
+            currentTarget = nil
+            hasWarped = false
         end
     end
 end)
+
 
 
 
