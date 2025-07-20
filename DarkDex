@@ -84,49 +84,26 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
--- วนลูปวาร์ปไปบนหัวมอน (ไม่โจมตี)
+-- ลูปวาร์ปไปหามอนสเตอร์ที่เลือกโดยไม่โจมตี
 task.spawn(function()
-    local currentTarget = nil
-    local hasWarped = false -- ตัวแปรบอกว่าเพิ่งวาร์ปไปแล้ว
-
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- เช็คเป้าปัจจุบัน
-            if currentTarget and currentTarget:IsDescendantOf(workspace) then
-                local health = tonumber(currentTarget:GetAttribute("Health"))
-                if health and health > 0 then
-                    -- ยังไม่ตายและยังอยู่ ไม่ต้องวาร์ปใหม่
-                    hasWarped = true
-                    continue
-                else
-                    -- ตายแล้ว รีเซ็ตเป้า
-                    currentTarget = nil
-                    hasWarped = false
-                end
-            else
-                -- เป้าไม่อยู่ในแมพ รีเซ็ตเป้า
-                currentTarget = nil
-                hasWarped = false
-            end
-
-            -- ถ้าไม่มีเป้า หรือ เป้าตาย ให้หาเป้าใหม่
-            if not currentTarget and not hasWarped then
-                for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                    local id = tostring(mob:GetAttribute("Monster_Id"))
-                    local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-
-                    if id == tostring(selectedMonsterId) and mobHRP then
-                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                        currentTarget = mob
-                        hasWarped = true
-                        break
-                    end
+            local targetMob = nil
+            for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
+                if mob:GetAttribute("Monster_Id") == selectedMonsterId then
+                    targetMob = mob
+                    break
                 end
             end
-        else
-            -- ปิด auto รีเซ็ตทั้งหมด
-            currentTarget = nil
-            hasWarped = false
+
+            if targetMob then
+                local mobHRP = targetMob:FindFirstChild("HumanoidRootPart")
+                if mobHRP then
+                    -- วาร์ปห่างนิดหน่อยให้ไม่ติดตัว
+                    local offset = Vector3.new(0, 3, -2)
+                    hrp.CFrame = mobHRP.CFrame + offset
+                end
+            end
         end
     end
 end)
