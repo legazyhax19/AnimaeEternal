@@ -14,84 +14,30 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "swords" })
 }
 
+-- Toggle Dungeon
+local autofarmDungeon = false
+Tabs.Main:AddToggle("AutoFarmDungeonToggle", {
+    Title = "🏰 AutoFarm Dungeon",
+    Default = false,
+    Callback = function(value)
+        autofarmDungeon = value
+    end
+})
+
+-- ระบบพื้นฐาน
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 
--- ตัวแปรสำคัญ
-local monsterMap = {} -- [ชื่อ Title] = { Id = id, Health = health, Reference = mob }
-local selectedMonsterId = nil
-local selectedMobData = nil
-local autofarm = false
-local lastTarget = nil
-
--- Dropdown UI
-local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
-    Title = "เลือกมอนสเตอร์",
-    Values = {},
-    Multi = false,
-    Default = nil
-})
-
-monsterDropdown:OnChanged(function(title)
-    selectedMobData = monsterMap[title]
-    selectedMonsterId = selectedMobData and selectedMobData.Id
-    Fluent:Notify({
-        Title = "เลือกแล้ว",
-        Content = "ID: " .. tostring(selectedMonsterId),
-        Duration = 3
-    })
-end)
-
--- ปุ่ม Refresh รายชื่อมอนสเตอร์
-Tabs.Main:AddButton({
-    Title = "🔄 รีเฟรชมอนสเตอร์",
-    Callback = function()
-        monsterMap = {}
-        local titles = {}
-
-        for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-            local id = mob:GetAttribute("Monster_Id")
-            local title = mob:GetAttribute("Title")
-            local health = tonumber(mob:GetAttribute("Health"))
-
-            if id and title and not monsterMap[title] then
-                monsterMap[title] = {
-                    Id = id,
-                    Health = health or 0,
-                    Reference = mob
-                }
-                table.insert(titles, title)
-            end
-        end
-
-        monsterDropdown:SetValues(titles)
-        Fluent:Notify({
-            Title = "โหลดสำเร็จ",
-            Content = "พบ " .. #titles .. " ตัว",
-            Duration = 3
-        })
-    end
-})
-
--- Toggle เปิด/ปิด AutoFarm
-Tabs.Main:AddToggle("AutoFarmToggle", {
-    Title = "🚀 เริ่มฟาร์ม",
-    Default = false,
-    Callback = function(value)
-        autofarm = value
-    end
-})
-
-
-local RunService = game:GetService("RunService")
 local currentTarget = nil
 local hasWarped = false
+local discoveredMonsterId = nil -- จะเก็บ Monster_Id ตัวแรกที่เจอ
 
+-- ฟังการตายของมอนสเตอร์เพื่อเคลียร์เป้าหมาย
 local function setupTargetDeathListener(humanoid)
     if humanoid then
-        -- เคลียร์ tag event เก่า
         if humanoid:FindFirstChild("__AutofarmDeath") then
             humanoid:FindFirstChild("__AutofarmDeath"):Destroy()
         end
@@ -108,54 +54,9 @@ local function setupTargetDeathListener(humanoid)
     end
 end
 
+-- ฟาร์มแบบไม่ต้องเลือก โดยใช้ Monster_Id จากตัวแรกที่เจอ
 RunService.Heartbeat:Connect(function()
-    if autofarm and selectedMonsterId then
-        if not currentTarget or not currentTarget.Parent then
-            currentTarget = nil
-            hasWarped = false
-        end
-
-        if not currentTarget then
-            for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                if mob:GetAttribute("Monster_Id") == selectedMonsterId then
-                    local humanoid = mob:FindFirstChildOfClass("Humanoid")
-                    if humanoid and humanoid.Health > 0 then
-                        currentTarget = mob
-                        setupTargetDeathListener(humanoid)
-                        break
-                    end
-                end
-            end
-        end
-
-        if currentTarget and not hasWarped then
-            local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
-            if mobHRP and character and character.PrimaryPart then
-                local safeOffset = Vector3.new(0, 3, -2)
-                character:SetPrimaryPartCFrame(mobHRP.CFrame + safeOffset)
-                hasWarped = true
-            end
-        end
-    else
-        currentTarget = nil
-        hasWarped = false
-    end
-end)
-
-local autofarmDungeon = false
-
-Tabs.Main:AddToggle("AutoFarmDungeonToggle", {
-    Title = "🏰 AutoFarm Dungeon",
-    Default = false,
-    Callback = function(value)
-        autofarmDungeon = value
-    end
-})
-
-local discoveredMonsterId = nil -- จำ ID ตัวแรกที่เจอไว้
-
-RunService.Heartbeat:Connect(function()
-    if autofarm then
+    if autofarmDungeon then
         if not currentTarget or not currentTarget.Parent then
             currentTarget = nil
             hasWarped = false
@@ -168,7 +69,12 @@ RunService.Heartbeat:Connect(function()
 
                 if humanoid and humanoid.Health > 0 then
                     if not discoveredMonsterId then
-                        discoveredMonsterId = id -- เก็บตัวแรกที่เจอไว้
+                        discoveredMonsterId = id -- เจอครั้งแรกแล้วใช้ ID นี้ตลอด
+                        Fluent:Notify({
+                            Title = "🎯 พบ Monster_Id แล้ว",
+                            Content = "ID: " .. tostring(id),
+                            Duration = 3
+                        })
                     end
 
                     if id == discoveredMonsterId then
@@ -191,7 +97,6 @@ RunService.Heartbeat:Connect(function()
     else
         currentTarget = nil
         hasWarped = false
-        discoveredMonsterId = nil -- รีเซ็ตเมื่อปิด
+        discoveredMonsterId = nil -- รีเซ็ตเมื่อหยุดฟาร์ม
     end
 end)
-
