@@ -15,38 +15,16 @@ local Tabs = {
 }
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
-local ToServer = ReplicatedStorage:WaitForChild("Events"):WaitForChild("To_Server")
 
 -- ตัวแปรสำคัญ
+local monsterMap = {} -- [ชื่อ Title] = { Id = id, Health = health, Reference = mob }
 local selectedMonsterId = nil
-local monsterMap = {} -- [ชื่อ Title] = Monster_Id
+local selectedMobData = nil
 local autofarm = false
 local lastTarget = nil
-
--- ฟังก์ชันอ่าน Health แบบยืดหยุ่น
-local function GetMonsterHealth(mob)
-    local health = mob:GetAttribute("Health")
-    if health ~= nil then
-        health = tonumber(health)
-        if health then return health end
-    end
-
-    local humanoid = mob:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health ~= nil then
-        return humanoid.Health
-    end
-
-    local val = mob:FindFirstChild("Health")
-    if val and (val:IsA("NumberValue") or val:IsA("IntValue")) then
-        return val.Value
-    end
-
-    return nil -- ไม่พบ health
-end
 
 -- Dropdown UI
 local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
@@ -57,8 +35,13 @@ local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
 })
 
 monsterDropdown:OnChanged(function(title)
-    selectedMonsterId = monsterMap[title]
-    Fluent:Notify({ Title = "เลือกแล้ว", Content = "ID: " .. tostring(selectedMonsterId), Duration = 3 })
+    selectedMobData = monsterMap[title]
+    selectedMonsterId = selectedMobData and selectedMobData.Id
+    Fluent:Notify({
+        Title = "เลือกแล้ว",
+        Content = "ID: " .. tostring(selectedMonsterId),
+        Duration = 3
+    })
 end)
 
 -- ปุ่ม Refresh รายชื่อมอนสเตอร์
@@ -71,14 +54,24 @@ Tabs.Main:AddButton({
         for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
             local id = mob:GetAttribute("Monster_Id")
             local title = mob:GetAttribute("Title")
+            local health = tonumber(mob:GetAttribute("Health"))
+
             if id and title and not monsterMap[title] then
-                monsterMap[title] = id
+                monsterMap[title] = {
+                    Id = id,
+                    Health = health or 0,
+                    Reference = mob
+                }
                 table.insert(titles, title)
             end
         end
 
         monsterDropdown:SetValues(titles)
-        Fluent:Notify({ Title = "โหลดสำเร็จ", Content = "พบ " .. #titles .. " ตัว", Duration = 3 })
+        Fluent:Notify({
+            Title = "โหลดสำเร็จ",
+            Content = "พบ " .. #titles .. " ตัว",
+            Duration = 3
+        })
     end
 })
 
@@ -91,17 +84,15 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
--- วนลูปโจมตีมอนที่เลือก
-local lastTarget = nil
-
+-- วนลูปวาร์ปไปบนหัวมอน (ไม่โจมตี)
 task.spawn(function()
     while task.wait(0.4) do
-        if autofarm and selectedMonsterId then
-            -- ถ้ามีเป้าเดิมอยู่ → เช็คว่ายังอยู่และยังไม่ตาย
-            if lastTarget and lastTarget:IsDescendantOf(workspace) then
-                local health = tonumber(lastTarget:GetAttribute("Health"))
+        if autofarm and selectedMobData then
+            local mob = selectedMobData.Reference
+            if mob and mob:IsDescendantOf(workspace) then
+                local health = tonumber(mob:GetAttribute("Health"))
                 if health and health > 0 then
-                    local mobHRP = lastTarget:FindFirstChild("HumanoidRootPart")
+                    local mobHRP = mob:FindFirstChild("HumanoidRootPart")
                     if mobHRP then
                         hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
                     end
@@ -109,23 +100,21 @@ task.spawn(function()
                 end
             end
 
-            -- หาเป้าหมายใหม่
+            -- ค้นหาเป้าใหม่ถ้าไม่มีหรือตายแล้ว
             lastTarget = nil
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                local mobId = mob:GetAttribute("Monster_Id")
+                local id = mob:GetAttribute("Monster_Id")
                 local health = tonumber(mob:GetAttribute("Health"))
-                if mobId == selectedMonsterId and health and health > 0 then
+
+                if id == selectedMonsterId and health and health > 0 then
                     local mobHRP = mob:FindFirstChild("HumanoidRootPart")
                     if mobHRP then
                         hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                        lastTarget = mob
+                        selectedMobData.Reference = mob
                         break
                     end
                 end
             end
-        else
-            lastTarget = nil
         end
     end
 end)
-
