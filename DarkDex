@@ -92,34 +92,45 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 })
 
 -- วนลูปโจมตีมอนที่เลือก
+local lastTarget = nil
+
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            local targetFound = false
+            -- ถ้ามีเป้าเดิมอยู่ → เช็คว่าตายหรือยัง
+            if lastTarget and lastTarget:IsDescendantOf(workspace) then
+                local health = tonumber(lastTarget:GetAttribute("Health"))
+                if health and health > 0 then
+                    -- ถ้ายังไม่ตาย → โจมตีต่อ
+                    local mobHRP = lastTarget:FindFirstChild("HumanoidRootPart")
+                    if mobHRP then
+                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                        ToServer:FireServer({
+                            ["Id"] = lastTarget.Name,
+                            ["Action"] = "_Mouse_Click"
+                        })
+                    end
+                    continue -- ข้ามไม่ต้องหาใหม่
+                end
+            end
+
+            -- หาเป้าหมายใหม่
+            lastTarget = nil
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                 local mobId = mob:GetAttribute("Monster_Id")
-                if mobId == selectedMonsterId then
+                local health = tonumber(mob:GetAttribute("Health"))
+                if mobId == selectedMonsterId and health and health > 0 then
                     local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                    local health = GetMonsterHealth(mob)
-
-                    if mobHRP and health and health > 0 then
-                        if mob ~= lastTarget then
-                            hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                            lastTarget = mob
-                        end
-
+                    if mobHRP then
+                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                        lastTarget = mob
                         ToServer:FireServer({
                             ["Id"] = mob.Name,
                             ["Action"] = "_Mouse_Click"
                         })
-
-                        targetFound = true
                         break
                     end
                 end
-            end
-            if not targetFound then
-                lastTarget = nil
             end
         else
             lastTarget = nil
