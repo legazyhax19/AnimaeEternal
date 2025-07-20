@@ -142,4 +142,44 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+local autofarmDungeon = false
 
+Tabs.Main:AddToggle("AutoFarmDungeonToggle", {
+    Title = "🏰 AutoFarm Dungeon",
+    Default = false,
+    Callback = function(value)
+        autofarmDungeon = value
+    end
+})
+
+RunService.Heartbeat:Connect(function()
+    if autofarm then
+        if not currentTarget or not currentTarget.Parent then
+            currentTarget = nil
+            hasWarped = false
+        end
+
+        if not currentTarget then
+            for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
+                local humanoid = mob:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    currentTarget = mob
+                    setupTargetDeathListener(humanoid)
+                    break -- หาตัวแรกที่ยังไม่ตาย
+                end
+            end
+        end
+
+        if currentTarget and not hasWarped then
+            local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+            if mobHRP and character and character.PrimaryPart then
+                local safeOffset = Vector3.new(0, 3, -2)
+                character:SetPrimaryPartCFrame(mobHRP.CFrame + safeOffset)
+                hasWarped = true
+            end
+        end
+    else
+        currentTarget = nil
+        hasWarped = false
+    end
+end)
