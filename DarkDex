@@ -152,6 +152,8 @@ Tabs.Main:AddToggle("AutoFarmDungeonToggle", {
     end
 })
 
+local discoveredMonsterId = nil -- เก็บ Monster_Id ที่ระบบเจอเอง
+
 RunService.Heartbeat:Connect(function()
     if autofarm then
         if not currentTarget or not currentTarget.Parent then
@@ -161,11 +163,19 @@ RunService.Heartbeat:Connect(function()
 
         if not currentTarget then
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
+                local id = mob:GetAttribute("Monster_Id")
                 local humanoid = mob:FindFirstChildOfClass("Humanoid")
+
                 if humanoid and humanoid.Health > 0 then
-                    currentTarget = mob
-                    setupTargetDeathListener(humanoid)
-                    break -- หาตัวแรกที่ยังไม่ตาย
+                    if not discoveredMonsterId then
+                        discoveredMonsterId = id -- บันทึก ID ตัวแรกที่เจอ
+                    end
+
+                    if id == discoveredMonsterId then
+                        currentTarget = mob
+                        setupTargetDeathListener(humanoid)
+                        break
+                    end
                 end
             end
         end
@@ -181,5 +191,7 @@ RunService.Heartbeat:Connect(function()
     else
         currentTarget = nil
         hasWarped = false
+        discoveredMonsterId = nil -- รีเซ็ตเมื่อปิด
     end
 end)
+
