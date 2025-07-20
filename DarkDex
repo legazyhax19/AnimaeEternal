@@ -86,12 +86,14 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 
 -- ลูปวาร์ปครั้งเดียวและรอตัวต่อไปเมื่อมอนตาย
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local currentTarget = nil
 local hasWarped = false
+local warpStartTime = 0
+local warpTimeout = 3 -- วินาที
 
 local function setupTargetDeathListener(humanoid)
     if humanoid then
-        -- เคลียร์ tag event เก่า
         if humanoid:FindFirstChild("__AutofarmDeath") then
             humanoid:FindFirstChild("__AutofarmDeath"):Destroy()
         end
@@ -115,6 +117,7 @@ RunService.Heartbeat:Connect(function()
             hasWarped = false
         end
 
+        -- หาเป้าหมายใหม่
         if not currentTarget then
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                 if mob:GetAttribute("Monster_Id") == selectedMonsterId then
@@ -128,13 +131,20 @@ RunService.Heartbeat:Connect(function()
             end
         end
 
+        -- วาร์ปผ่านเซิร์ฟเวอร์
         if currentTarget and not hasWarped then
-            local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
-            if mobHRP and character and character.PrimaryPart then
-                local safeOffset = Vector3.new(0, 3, -2)
-                character:SetPrimaryPartCFrame(mobHRP.CFrame + safeOffset)
-                hasWarped = true
-            end
+            ReplicatedStorage.Events.To_Server:FireServer({
+                ["Id"] = currentTarget.Name, -- ใช้ชื่อ mob หรือ selectedMonsterId ตามเซิร์ฟเวอร์
+                ["Action"] = "Teleport"
+            })
+            hasWarped = true
+            warpStartTime = tick()
+        end
+
+        -- fallback หากวาร์ปไม่สำเร็จภายในเวลา
+        if hasWarped and tick() - warpStartTime > warpTimeout then
+            currentTarget = nil
+            hasWarped = false
         end
     else
         currentTarget = nil
