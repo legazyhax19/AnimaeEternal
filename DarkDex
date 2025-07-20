@@ -86,35 +86,36 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 
 -- วนลูปวาร์ปไปบนหัวมอน (ไม่โจมตี)
 task.spawn(function()
+    local currentTarget = nil
+
     while task.wait(0.4) do
-        if autofarm and selectedMobData then
-            local mob = selectedMobData.Reference
-            if mob and mob:IsDescendantOf(workspace) then
-                local health = tonumber(mob:GetAttribute("Health"))
-                if health and health > 0 then
-                    local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                    if mobHRP then
-                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                    end
-                    continue
+        if autofarm and selectedMonsterId then
+            -- ถ้ามีเป้าอยู่แล้ว ตรวจสอบว่าเป้ายังไม่ตาย
+            if currentTarget and currentTarget:IsDescendantOf(workspace) then
+                local health = tonumber(currentTarget:GetAttribute("Health"))
+                local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+
+                if health and health > 0 and mobHRP then
+                    -- วาร์ปไปอยู่บนหัวมอน
+                    hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                    continue -- ยังไม่ตายก็ลูปซ้ำ
                 end
             end
 
-            -- ค้นหาเป้าใหม่ถ้าไม่มีหรือตายแล้ว
-            lastTarget = nil
+            -- หามอนใหม่
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                local id = mob:GetAttribute("Monster_Id")
+                local id = tostring(mob:GetAttribute("Monster_Id"))
                 local health = tonumber(mob:GetAttribute("Health"))
+                local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-                if id == selectedMonsterId and health and health > 0 then
-                    local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                    if mobHRP then
-                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                        selectedMobData.Reference = mob
-                        break
-                    end
+                if id == tostring(selectedMonsterId) and health and health > 0 and mobHRP then
+                    currentTarget = mob
+                    hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                    break
                 end
             end
+        else
+            currentTarget = nil
         end
     end
 end)
