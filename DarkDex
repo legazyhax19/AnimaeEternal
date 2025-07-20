@@ -87,32 +87,48 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 -- วนลูปวาร์ปไปบนหัวมอน (ไม่โจมตี)
 task.spawn(function()
     local currentTarget = nil
+    local hasWarped = false -- ตัวแปรบอกว่าเพิ่งวาร์ปไปแล้ว
 
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
+            -- เช็คเป้าปัจจุบัน
             if currentTarget and currentTarget:IsDescendantOf(workspace) then
                 local health = tonumber(currentTarget:GetAttribute("Health"))
                 if health and health > 0 then
-                    -- ยังไม่ตาย: ทำอะไรเพิ่มเติมตรงนี้ถ้าต้องการ
+                    -- ยังไม่ตายและยังอยู่ ไม่ต้องวาร์ปใหม่
+                    hasWarped = true
                     continue
+                else
+                    -- ตายแล้ว รีเซ็ตเป้า
+                    currentTarget = nil
+                    hasWarped = false
                 end
+            else
+                -- เป้าไม่อยู่ในแมพ รีเซ็ตเป้า
+                currentTarget = nil
+                hasWarped = false
             end
 
-            -- ถ้าไม่มีเป้า หรือเป้าตาย → หาเป้าใหม่และวาร์ปไปเลย
-            for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                local id = tostring(mob:GetAttribute("Monster_Id"))
-                local mobHRP = mob:FindFirstChild("HumanoidRootPart")
+            -- ถ้าไม่มีเป้า หรือ เป้าตาย ให้หาเป้าใหม่
+            if not currentTarget and not hasWarped then
+                for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
+                    local id = tostring(mob:GetAttribute("Monster_Id"))
+                    local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-                if id == tostring(selectedMonsterId) and mobHRP then
-                    -- วาร์ปไปก่อนเลย โดยไม่เช็คเลือด
-                    hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                    currentTarget = mob
-                    break
+                    if id == tostring(selectedMonsterId) and mobHRP then
+                        hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                        currentTarget = mob
+                        hasWarped = true
+                        break
+                    end
                 end
             end
         else
+            -- ปิด auto รีเซ็ตทั้งหมด
             currentTarget = nil
+            hasWarped = false
         end
     end
 end)
+
 
