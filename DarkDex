@@ -89,7 +89,7 @@ local currentTarget = nil
 local hasWarped = false -- สำหรับเช็คว่าได้วาร์ปไปแล้วหรือยัง
 
 task.spawn(function()
-    while task.wait(0.4) do
+    while task.wait(0.1) do
         if autofarm and selectedMonsterId then
             -- ถ้ายังไม่มีเป้าหมาย ให้ค้นหา
             if not currentTarget or not currentTarget.Parent then
