@@ -90,27 +90,23 @@ task.spawn(function()
 
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- ถ้ามีเป้าอยู่แล้ว ตรวจสอบว่าเป้ายังไม่ตาย
             if currentTarget and currentTarget:IsDescendantOf(workspace) then
                 local health = tonumber(currentTarget:GetAttribute("Health"))
-                local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
-
-                if health and health > 0 and mobHRP then
-                    -- วาร์ปไปอยู่บนหัวมอน
-                    hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                    continue -- ยังไม่ตายก็ลูปซ้ำ
+                if health and health > 0 then
+                    -- ยังไม่ตาย: ทำอะไรเพิ่มเติมตรงนี้ถ้าต้องการ
+                    continue
                 end
             end
 
-            -- หามอนใหม่
+            -- ถ้าไม่มีเป้า หรือเป้าตาย → หาเป้าใหม่และวาร์ปไปเลย
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                 local id = tostring(mob:GetAttribute("Monster_Id"))
-                local health = tonumber(mob:GetAttribute("Health"))
                 local mobHRP = mob:FindFirstChild("HumanoidRootPart")
 
-                if id == tostring(selectedMonsterId) and health and health > 0 and mobHRP then
-                    currentTarget = mob
+                if id == tostring(selectedMonsterId) and mobHRP then
+                    -- วาร์ปไปก่อนเลย โดยไม่เช็คเลือด
                     hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
+                    currentTarget = mob
                     break
                 end
             end
@@ -119,3 +115,4 @@ task.spawn(function()
         end
     end
 end)
+
