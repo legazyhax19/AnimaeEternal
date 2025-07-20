@@ -84,39 +84,42 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
--- ลูปวาร์ปไปหามอนสเตอร์ที่เลือกโดยไม่โจมตี
 -- ลูปวาร์ปครั้งเดียวและรอตัวต่อไปเมื่อมอนตาย
 local currentTarget = nil
 
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- ถ้าไม่มีเป้าหมายหรือเป้าหมายตายแล้ว
-            if not currentTarget or not currentTarget.Parent or (currentTarget:FindFirstChildOfClass("Humanoid") and currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0) then
+            -- ถ้าไม่มีเป้าหมายหรือเป้าหมายตายไปแล้ว
+            if not currentTarget or not currentTarget.Parent then
                 currentTarget = nil
+            elseif currentTarget:FindFirstChildOfClass("Humanoid") and currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0 then
+                currentTarget = nil
+            end
 
-                -- หาเป้าหมายตัวใหม่
+            -- ถ้ายังไม่มีเป้าหมายใหม่ ให้หาใหม่และวาร์ป
+            if not currentTarget then
                 for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                     if mob:GetAttribute("Monster_Id") == selectedMonsterId then
-                        currentTarget = mob
-                        break
-                    end
-                end
-
-                -- วาร์ปไปหาเป้าหมายใหม่
-                if currentTarget then
-                    local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
-                    if mobHRP then
-                        local offset = Vector3.new(0, 3, -2)
-                        hrp.CFrame = mobHRP.CFrame + offset
+                        local mobHumanoid = mob:FindFirstChildOfClass("Humanoid")
+                        if mobHumanoid and mobHumanoid.Health > 0 then
+                            currentTarget = mob
+                            local mobHRP = mob:FindFirstChild("HumanoidRootPart")
+                            if mobHRP then
+                                local offset = Vector3.new(0, 3, -2)
+                                hrp.CFrame = mobHRP.CFrame + offset
+                            end
+                            break
+                        end
                     end
                 end
             end
         else
-            currentTarget = nil -- หยุดฟาร์มให้เคลียร์เป้าหมายเก่า
+            currentTarget = nil -- รีเซ็ตถ้าปิดฟาร์ม
         end
     end
 end)
+
 
 
 
