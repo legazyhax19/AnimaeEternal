@@ -91,7 +91,7 @@ local hasWarped = false
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- รีเซ็ตถ้ามอนตายหรือหายไป
+            -- รีเซ็ตเป้าหมายถ้าตายหรือหายไป
             if not currentTarget or not currentTarget.Parent then
                 currentTarget = nil
                 hasWarped = false
@@ -100,26 +100,30 @@ task.spawn(function()
                 hasWarped = false
             end
 
-            -- หามอนใหม่แล้ววาร์ปครั้งเดียว
+            -- วาร์ปครั้งเดียวเมื่อเจอมอนใหม่
+            if not hasWarped and currentTarget then
+                local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+                if mobHRP then
+                    local offset = Vector3.new(0, 3, -2)
+                    hrp.CFrame = mobHRP.CFrame + offset
+                    hasWarped = true
+                end
+            end
+
+            -- หามอนใหม่เมื่อไม่มีเป้าหมาย
             if not currentTarget then
                 for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                     if mob:GetAttribute("Monster_Id") == selectedMonsterId then
                         local humanoid = mob:FindFirstChildOfClass("Humanoid")
                         if humanoid and humanoid.Health > 0 then
                             currentTarget = mob
-                            local mobHRP = mob:FindFirstChild("HumanoidRootPart")
-                            if mobHRP then
-                                local offset = Vector3.new(0, 3, -2)
-                                hrp.CFrame = mobHRP.CFrame + offset
-                                hasWarped = true
-                            end
                             break
                         end
                     end
                 end
             end
 
-            -- โจมตีซ้ำ ๆ ถ้ามอนยังไม่ตาย
+            -- โจมตีซ้ำ ๆ จนกว่ามอนจะตาย
             if currentTarget and hasWarped then
                 local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
                 if humanoid and humanoid.Health > 0 then
@@ -130,11 +134,13 @@ task.spawn(function()
                 end
             end
         else
+            -- รีเซ็ตเมื่อปิดฟาร์ม
             currentTarget = nil
             hasWarped = false
         end
     end
 end)
+
 
 
 
