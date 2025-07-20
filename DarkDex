@@ -1,8 +1,8 @@
 -- โหลด Fluent GUI
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "AutoFarm",
-    SubTitle = "By You",
+    Title = "HappyHUB",
+    SubTitle = "By Legazyhax19",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 400),
     Acrylic = true,
