@@ -119,7 +119,7 @@ task.spawn(function()
             if currentTarget and not hasWarped then
                 local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
                 if mobHRP and character and character.PrimaryPart then
-                    local offset = Vector3.new(0, 3, -2)
+                    local offset = Vector3.new(0, 0, -2)
                     character:SetPrimaryPartCFrame(mobHRP.CFrame + offset)
                     hasWarped = true
                 end
