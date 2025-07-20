@@ -152,7 +152,7 @@ Tabs.Main:AddToggle("AutoFarmDungeonToggle", {
     end
 })
 
-local discoveredMonsterId = nil -- เก็บ Monster_Id ที่ระบบเจอเอง
+local discoveredMonsterId = nil -- จำ ID ตัวแรกที่เจอไว้
 
 RunService.Heartbeat:Connect(function()
     if autofarm then
@@ -168,7 +168,7 @@ RunService.Heartbeat:Connect(function()
 
                 if humanoid and humanoid.Health > 0 then
                     if not discoveredMonsterId then
-                        discoveredMonsterId = id -- บันทึก ID ตัวแรกที่เจอ
+                        discoveredMonsterId = id -- เก็บตัวแรกที่เจอไว้
                     end
 
                     if id == discoveredMonsterId then
