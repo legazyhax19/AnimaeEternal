@@ -85,27 +85,38 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
 })
 
 -- ลูปวาร์ปไปหามอนสเตอร์ที่เลือกโดยไม่โจมตี
+-- ลูปวาร์ปครั้งเดียวและรอตัวต่อไปเมื่อมอนตาย
+local currentTarget = nil
+
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            local targetMob = nil
-            for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
-                if mob:GetAttribute("Monster_Id") == selectedMonsterId then
-                    targetMob = mob
-                    break
-                end
-            end
+            -- ถ้าไม่มีเป้าหมายหรือเป้าหมายตายแล้ว
+            if not currentTarget or not currentTarget.Parent or (currentTarget:FindFirstChildOfClass("Humanoid") and currentTarget:FindFirstChildOfClass("Humanoid").Health <= 0) then
+                currentTarget = nil
 
-            if targetMob then
-                local mobHRP = targetMob:FindFirstChild("HumanoidRootPart")
-                if mobHRP then
-                    -- วาร์ปห่างนิดหน่อยให้ไม่ติดตัว
-                    local offset = Vector3.new(0, 3, -2)
-                    hrp.CFrame = mobHRP.CFrame + offset
+                -- หาเป้าหมายตัวใหม่
+                for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
+                    if mob:GetAttribute("Monster_Id") == selectedMonsterId then
+                        currentTarget = mob
+                        break
+                    end
+                end
+
+                -- วาร์ปไปหาเป้าหมายใหม่
+                if currentTarget then
+                    local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+                    if mobHRP then
+                        local offset = Vector3.new(0, 3, -2)
+                        hrp.CFrame = mobHRP.CFrame + offset
+                    end
                 end
             end
+        else
+            currentTarget = nil -- หยุดฟาร์มให้เคลียร์เป้าหมายเก่า
         end
     end
 end)
+
 
 
