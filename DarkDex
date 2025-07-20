@@ -97,20 +97,15 @@ local lastTarget = nil
 task.spawn(function()
     while task.wait(0.4) do
         if autofarm and selectedMonsterId then
-            -- ถ้ามีเป้าเดิมอยู่ → เช็คว่าตายหรือยัง
+            -- ถ้ามีเป้าเดิมอยู่ → เช็คว่ายังอยู่และยังไม่ตาย
             if lastTarget and lastTarget:IsDescendantOf(workspace) then
                 local health = tonumber(lastTarget:GetAttribute("Health"))
                 if health and health > 0 then
-                    -- ถ้ายังไม่ตาย → โจมตีต่อ
                     local mobHRP = lastTarget:FindFirstChild("HumanoidRootPart")
                     if mobHRP then
                         hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
-                        ToServer:FireServer({
-                            ["Id"] = lastTarget.Name,
-                            ["Action"] = "_Mouse_Click"
-                        })
                     end
-                    continue -- ข้ามไม่ต้องหาใหม่
+                    continue
                 end
             end
 
@@ -124,10 +119,6 @@ task.spawn(function()
                     if mobHRP then
                         hrp.CFrame = mobHRP.CFrame + Vector3.new(0, 2, 0)
                         lastTarget = mob
-                        ToServer:FireServer({
-                            ["Id"] = mob.Name,
-                            ["Action"] = "_Mouse_Click"
-                        })
                         break
                     end
                 end
@@ -137,3 +128,4 @@ task.spawn(function()
         end
     end
 end)
+
