@@ -1,4 +1,4 @@
--- โหลด Fluent GUI
+-- ======= โหลด Fluent GUI =======
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
     Title = "HappyHUB",
@@ -14,19 +14,27 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "swords" })
 }
 
+-- ======= ตัวแปรพื้นฐาน =======
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 
--- ตัวแปรสำคัญ
+-- สำหรับฟาร์มมอนสเตอร์
 local monsterMap = {} -- [ชื่อ Title] = { Id = id, Health = health, Reference = mob }
 local selectedMonsterId = nil
 local selectedMobData = nil
 local autofarm = false
-local lastTarget = nil
 
--- Dropdown UI
+-- สำหรับสุ่ม Star และ Power
+local autoStarEnabled = false
+local autoPowerEnabled = false
+
+-- รีเฟอเรนซ์ Server Event
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ToServer = ReplicatedStorage:WaitForChild("Events"):WaitForChild("To_Server")
+
+-- ======= UI - Dropdown เลือกมอนสเตอร์ =======
 local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
     Title = "เลือกมอนสเตอร์",
     Values = {},
@@ -37,6 +45,7 @@ local monsterDropdown = Tabs.Main:AddDropdown("SelectMonster", {
 monsterDropdown:OnChanged(function(title)
     selectedMobData = monsterMap[title]
     selectedMonsterId = selectedMobData and selectedMobData.Id
+
     Fluent:Notify({
         Title = "เลือกแล้ว",
         Content = "ID: " .. tostring(selectedMonsterId),
@@ -44,15 +53,16 @@ monsterDropdown:OnChanged(function(title)
     })
 end)
 
--- ปุ่ม Refresh รายชื่อมอนสเตอร์
+-- ======= UI - ปุ่มรีเฟรชมอนสเตอร์ =======
 Tabs.Main:AddButton({
     Title = "🔄 รีเฟรชมอนสเตอร์",
     Callback = function()
+        -- เคลียร์ข้อมูลเก่า
         monsterMap = {}
         selectedMonsterId = nil
         selectedMobData = nil
-        monsterDropdown:SetValue(nil) -- ✅ รีเซ็ตค่าที่เลือกใน Dropdown
-        
+        monsterDropdown:SetValue(nil) -- รีเซ็ตค่า Dropdown
+
         local titles = {}
         for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
             local id = mob:GetAttribute("Monster_Id")
@@ -79,8 +89,7 @@ Tabs.Main:AddButton({
     end
 })
 
-
--- Toggle เปิด/ปิด AutoFarm
+-- ======= UI - Toggle เปิด/ปิด AutoFarm =======
 Tabs.Main:AddToggle("AutoFarmToggle", {
     Title = "🚀 เริ่มฟาร์ม",
     Default = false,
@@ -89,18 +98,33 @@ Tabs.Main:AddToggle("AutoFarmToggle", {
     end
 })
 
+-- ======= UI - Toggle สุ่ม Star =======
+Tabs.Main:AddToggle("AutoStarToggle", {
+    Title = "⭐ สุ่ม Star อัตโนมัติ",
+    Default = false,
+    Callback = function(value)
+        autoStarEnabled = value
+    end
+})
 
-local RunService = game:GetService("RunService")
-local currentTarget = nil
-local hasWarped = false
+-- ======= UI - Toggle สุ่ม Power =======
+Tabs.Main:AddToggle("AutoPowerToggle", {
+    Title = "⚡ สุ่ม Power อัตโนมัติ",
+    Default = false,
+    Callback = function(value)
+        autoPowerEnabled = value
+    end
+})
 
+-- ======= ฟังก์ชันช่วยฟังการตายของมอนสเตอร์ =======
 local function setupTargetDeathListener(humanoid)
     if humanoid then
-        -- เคลียร์ tag event เก่า
+        -- ลบ tag เดิมถ้ามี
         if humanoid:FindFirstChild("__AutofarmDeath") then
             humanoid:FindFirstChild("__AutofarmDeath"):Destroy()
         end
 
+        -- สร้าง tag ใหม่
         local tag = Instance.new("ObjectValue")
         tag.Name = "__AutofarmDeath"
         tag.Value = humanoid
@@ -113,13 +137,21 @@ local function setupTargetDeathListener(humanoid)
     end
 end
 
+-- ======= ตัวแปรสถานะฟาร์ม =======
+local RunService = game:GetService("RunService")
+local currentTarget = nil
+local hasWarped = false
+
+-- ======= Loop ฟาร์มมอนสเตอร์ =======
 RunService.Heartbeat:Connect(function()
     if autofarm and selectedMonsterId then
+        -- เช็คเป้าหมายยังอยู่ไหม
         if not currentTarget or not currentTarget.Parent then
             currentTarget = nil
             hasWarped = false
         end
 
+        -- หาเป้าหมายใหม่ถ้าไม่มี
         if not currentTarget then
             for _, mob in pairs(workspace.Debris.Monsters:GetChildren()) do
                 if mob:GetAttribute("Monster_Id") == selectedMonsterId then
@@ -133,6 +165,7 @@ RunService.Heartbeat:Connect(function()
             end
         end
 
+        -- วาร์ปไปยังมอนสเตอร์
         if currentTarget and not hasWarped then
             local mobHRP = currentTarget:FindFirstChild("HumanoidRootPart")
             if mobHRP and character and character.PrimaryPart then
@@ -144,5 +177,39 @@ RunService.Heartbeat:Connect(function()
     else
         currentTarget = nil
         hasWarped = false
+    end
+end)
+
+-- ======= Loop สุ่ม Star อัตโนมัติ =======
+task.spawn(function()
+    while true do
+        if autoStarEnabled then
+            ToServer:FireServer({
+                Open_Amount = 13,
+                Action = "_Stars",
+                Name = "Star_15"
+            })
+            print("⭐ สุ่ม Star แล้ว")
+            task.wait(2.5) -- รออนิเมชั่นสุ่ม
+        else
+            task.wait(0.1)
+        end
+    end
+end)
+
+-- ======= Loop สุ่ม Power อัตโนมัติ =======
+task.spawn(function()
+    while true do
+        if autoPowerEnabled then
+            ToServer:FireServer({
+                Open_Amount = 4,
+                Action = "_Gacha_Activate",
+                Name = "Power_Energy_Runes"
+            })
+            print("⚡ สุ่ม Power แล้ว")
+            task.wait(2.5) -- รออนิเมชั่นสุ่ม
+        else
+            task.wait(0.1)
+        end
     end
 end)
